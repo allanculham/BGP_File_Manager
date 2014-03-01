@@ -22,7 +22,7 @@
  * @author		warhawk3407 <warhawk3407@gmail.com> @NOSPAM
  * @copyleft	2013
  * @license		GNU General Public License version 3.0 (GPLv3)
- * @version		(Release 0) DEVELOPER BETA 6
+ * @version		(Release 0) DEVELOPER BETA 8
  * @link		http://www.bgpanel.net/
  */
 
@@ -48,8 +48,6 @@ $return = 'server.php';
 require("configuration.php");
 require("include.php");
 require("./libs/lgsl/lgsl_class.php");
-require("./includes/func.ssh2.inc.php");
-require_once("./libs/phpseclib/Crypt/AES.php");
 
 
 $title = T_('Server Summary');
@@ -63,9 +61,9 @@ if (query_numrows( "SELECT `name` FROM `".DBPREFIX."server` WHERE `serverid` = '
 
 $rows = query_fetch_assoc( "SELECT * FROM `".DBPREFIX."server` WHERE `serverid` = '".$serverid."' LIMIT 1" );
 $serverIp = query_fetch_assoc( "SELECT `ip` FROM `".DBPREFIX."boxIp` WHERE `ipid` = '".$rows['ipid']."' LIMIT 1" );
-$box = query_fetch_assoc( "SELECT * FROM `".DBPREFIX."box` WHERE `boxid` = '".$rows['boxid']."' LIMIT 1" );
+$box = query_fetch_assoc( "SELECT `name` FROM `".DBPREFIX."box` WHERE `boxid` = '".$rows['boxid']."' LIMIT 1" );
 $type = query_fetch_assoc( "SELECT `querytype` FROM `".DBPREFIX."game` WHERE `gameid` = '".$rows['gameid']."' LIMIT 1");
-$game = query_fetch_assoc( "SELECT `game`, `cachedir` FROM `".DBPREFIX."game` WHERE `gameid` = '".$rows['gameid']."' LIMIT 1" );
+$game = query_fetch_assoc( "SELECT `game` FROM `".DBPREFIX."game` WHERE `gameid` = '".$rows['gameid']."' LIMIT 1" );
 $group = query_fetch_assoc( "SELECT `name` FROM `".DBPREFIX."group` WHERE `groupid` = '".$rows['groupid']."' LIMIT 1" );
 $logs = mysql_query( "SELECT * FROM `".DBPREFIX."log` WHERE `serverid` = '".$serverid."' ORDER BY `logid` DESC LIMIT 15" );
 
@@ -86,151 +84,6 @@ if ($checkGroup == FALSE)
 
 
 //---------------------------------------------------------+
-
-switch(@$_GET['task']){
-	case 'serverreinstallgamefiles':{
-		$error = '';
-		###
-		if (empty($serverid))
-		{
-			$error .= T_('No ServerID specified for server validation !');
-		}
-		else
-		{
-			if (!is_numeric($serverid))
-			{
-				$error .= T_('Invalid ServerID. ');
-			}
-			else if (query_numrows( "SELECT `name` FROM `".DBPREFIX."server` WHERE `serverid` = '".$serverid."'" ) == 0)
-			{
-				$error .= T_('Invalid ServerID. ');
-			}
-		}
-		###
-		if (!empty($error))
-		{
-			$_SESSION['msg1'] = T_('Validation Error!');
-			$_SESSION['msg2'] = $error;
-			$_SESSION['msg-type'] = 'error';
-			unset($error);
-			header( 'Location: server.php' );
-			die();
-		}
-		###
-		###
-		$aes = new Crypt_AES();
-		$aes->setKeyLength(256);
-		$aes->setKey(CRYPT_KEY);
-		###
-		// Get SSH2 Object OR ERROR String
-		$ssh = newNetSSH2($box['ip'], $box['sshport'], $box['login'], $aes->decrypt($box['password']));
-		if (!is_object($ssh))
-		{
-			$_SESSION['msg1'] = T_('Connection Error!');
-			$_SESSION['msg2'] = $ssh;
-			$_SESSION['msg-type'] = 'error';
-			header( "Location: server.php?id=".urlencode($serverid) );
-			die();
-		}
-		###
-		
-		$output = $ssh->exec("rm -r -f ".$rows['homedir']."/*");
-		if (!empty($output)) //If the output is empty, we consider that there is no errors
-		{
-			$_SESSION['msg1'] = T_('Error!');
-			$_SESSION['msg2'] = T_('Unable to find HOMEDIR path.');
-			$_SESSION['msg-type'] = 'error';
-			header( "Location: server.php?id=".urlencode($serverid) );
-			die();
-		}
-
-		$output = $ssh->exec("cp ".$game['cachedir']."/* ".$rows['homedir']."/");
-		if (!empty($output)) //If the output is empty, we consider that there is no errors
-		{
-			$_SESSION['msg1'] = T_('Error!');
-			$_SESSION['msg2'] = T_('Unable to find HOMEDIR path.');
-			$_SESSION['msg-type'] = 'error';
-			header( "Location: server.php?id=".urlencode($serverid) );
-			die();
-		}
-		
-		$_SESSION['msg1'] = T_('Game Files ReInstalled Successfully!');
-		$_SESSION['msg2'] = T_('The game files has been reinstalled.');
-		$_SESSION['msg-type'] = 'success';
-		
-		
-		header( "Location: server.php?id=".urlencode($serverid) );
-		die();
-		break;
-	}
-
-	case 'serverinstallgamefiles':{
-		$error = '';
-		###
-		if (empty($serverid))
-		{
-			$error .= T_('No ServerID specified for server validation !');
-		}
-		else
-		{
-			if (!is_numeric($serverid))
-			{
-				$error .= T_('Invalid ServerID. ');
-			}
-			else if (query_numrows( "SELECT `name` FROM `".DBPREFIX."server` WHERE `serverid` = '".$serverid."'" ) == 0)
-			{
-				$error .= T_('Invalid ServerID. ');
-			}
-		}
-		###
-		if (!empty($error))
-		{
-			$_SESSION['msg1'] = T_('Validation Error!');
-			$_SESSION['msg2'] = $error;
-			$_SESSION['msg-type'] = 'error';
-			unset($error);
-			header( 'Location: server.php' );
-			die();
-		}
-		###
-		$aes = new Crypt_AES();
-		$aes->setKeyLength(256);
-		$aes->setKey(CRYPT_KEY);
-		###
-		// Get SSH2 Object OR ERROR String
-		$ssh = newNetSSH2($box['ip'], $box['sshport'], $box['login'], $aes->decrypt($box['password']));
-		if (!is_object($ssh))
-		{
-			$_SESSION['msg1'] = T_('Connection Error!');
-			$_SESSION['msg2'] = $ssh;
-			$_SESSION['msg-type'] = 'error';
-			header( "Location: server.php?id=".urlencode($serverid) );
-			die();
-		}
-		###
-		
-		$output = $ssh->exec("cp ".$game['cachedir']."/* ".$rows['homedir']."/");
-		if (!empty($output)) //If the output is empty, we consider that there is no errors
-		{
-			$_SESSION['msg1'] = T_('Error!'.$game['cachedir']);
-			$_SESSION['msg2'] = T_('Unable to find HOMEDIR path.');
-			$_SESSION['msg-type'] = 'error';
-			header( "Location: server.php?id=".urlencode($serverid) );
-			die();
-		}
-		
-		$_SESSION['msg1'] = T_('Game Files Copy Successfully!');
-		$_SESSION['msg2'] = T_('The new game files has been added.');
-		$_SESSION['msg-type'] = 'success';
-		
-		
-		header( "Location: server.php?id=".urlencode($serverid) );
-		die();
-		break;
-	}
-
-}
-
 
 
 include("./bootstrap/header.php");
@@ -266,7 +119,7 @@ if ($rows['panelstatus'] == 'Started')
 ?>
 
 					<li><a href="#5" data-toggle="tab"><?php echo T_('Activity Logs'); ?></a></li>
-					<li><a href="#6" data-toggle="tab"><?php echo T_('Game Files Manager'); ?></a></li>
+					<li><a href="#6" data-toggle="tab">Server Files</a></li> <!-- Needs Translation Text -->
 				</ul>
 				<div class="tab-content">
 					<div class="tab-pane active" id="1">
@@ -327,8 +180,12 @@ if ($rows['panelstatus'] == 'Started')
 											<td colspan="2"><?php echo htmlspecialchars($rows['startline'], ENT_QUOTES); ?></td>
 										</tr>
 										<tr>
-											<td><?php echo T_('Home Directory'); ?></td>
-											<td colspan="2"><?php echo htmlspecialchars($rows['homedir'], ENT_QUOTES); ?></td>
+											<td><?php echo T_('Directory'); ?></td>
+											<td colspan="2"><?php echo htmlspecialchars(dirname($rows['path']), ENT_QUOTES); ?></td>
+										</tr>
+										<tr>
+											<td><?php echo T_('Executable'); ?></td>
+											<td colspan="2"><?php echo htmlspecialchars(basename($rows['path']), ENT_QUOTES); ?></td>
 										</tr>
 										<tr>
 											<td><?php echo T_('Screen Name'); ?></td>
@@ -359,7 +216,7 @@ unset($n);
 							</div>
 						</div>
 						<div class="row">
-							<div class="span6 offset3">
+							<div class="span6">
 								<div class="well">
 									<div style="text-align: center; margin-bottom: 5px;">
 										<span class="label label-info"><?php echo T_('Server Monitoring'); ?></span>
@@ -415,7 +272,7 @@ else
 					</div>
 					<div class="tab-pane" id="2">
 						<div class="row">
-							<div class="span8 offset2">
+							<div class="span12">
 								<div class="well">
 									<div style="text-align: center; margin-bottom: 5px;">
 										<span class="label label-info"><?php echo T_('Server Control Panel'); ?></span>
@@ -449,29 +306,30 @@ else if ($rows['status'] == 'Active')
 ?>
 									<table class="table">
 										<tr>
+											<td><?php echo T_('Path'); ?></td>
 											<td><?php echo T_('Screen Name'); ?></td>
-											<td><?php echo T_('Owner Group'); ?></td>
 											<td><?php echo T_('Box'); ?></td>
+											<td><?php echo T_('IP:Port'); ?></td>
 											<td><?php echo T_('Panel Status'); ?></td>
 											<td><?php echo T_('Net Status'); ?></td>
 										</tr>
 										<tr>
+											<td><?php echo htmlspecialchars($rows['path'], ENT_QUOTES); ?></td>
 											<td><?php echo $rows['screen']; ?></td>
-											<td><?php echo htmlspecialchars($group['name'], ENT_QUOTES); ?></td>
-											<td><?php echo htmlspecialchars($box['name']); ?> - <?php echo $serverIp['ip']; ?></td>
+											<td><?php echo htmlspecialchars($box['name'], ENT_QUOTES); ?></td>
+											<td><?php echo $serverIp['ip'].':'.$rows['port']; ?></td>
 											<td><?php echo formatStatus($rows['panelstatus']); ?></td>
 											<td><?php
 
-	if (@$server['b']['status'] == '1')
-	{
-		echo formatStatus('Online');
-	}
-	else
-	{
-		echo formatStatus('Offline');
-	}
-
-	unset($server);
+if (@$server['b']['status'] == '1')
+{
+	echo formatStatus('Online');
+}
+else
+{
+	echo formatStatus('Offline');
+}
+unset($server);
 
 ?></td>
 										</tr>
@@ -506,7 +364,6 @@ else if ($rows['status'] == 'Active')
 								</div>
 							</div>
 						</div>
-						<div style="height:150px"></div>
 					</div>
 					<div class="tab-pane" id="3">
 						<div class="well">
@@ -735,185 +592,92 @@ unset($logs);
 							</div>
 						</div>
 					</div>
-
 					<div class="tab-pane" id="6">
-			<div class="row-fluid">
-				<div class="span6">
-					<div class="well">
-						<div style="text-align: center; margin-bottom: 5px;">
-							<span class="label label-info"><?php echo T_('Installed Files'); ?></span>
+						<div class="row">
+							<div class="span12">
+								<div class="well">
+								
+								<script type="text/javascript">
+
+	function setupLinks(){
+	
+		$('.folder').click(function(){			
+			path = $(this).attr('value');		
+			$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path='+ encodeURIComponent(path), function(){				
+				setupLinks();			
+			});		
+		});
+		
+		$('#delete').click(function(){	
+			$('.fileSelector').each(function(){
+			if (this.checked) {		
+			   alert($(this).attr('value'));
+			}			
+			})
+		});
+		
+		$('#upload').click(function(){
+						
+			var path = $('#path').attr('value');	
+			var fd = new FormData();
+			fd.append("uploadFile", $('#uploadFile').get(0).files[0]);
+			
+			$.ajax({
+			  url: "filemanagerajax.php?action=fileUpload&serverid=<?php echo $serverid;?>&path="+ encodeURIComponent(path),
+			  type: "POST",
+			  data: fd,
+			  processData: false, 
+			  contentType: false
+			}).done(function( data ) {
+				if ( console && console.log ) {
+					//console.log(data);
+				}
+
+			}).always(function(){
+			
+				$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path='+ encodeURIComponent(path), function(){				
+					setupLinks();			
+				});	
+			
+			});
+
+		});
+
+
+	}
+	
+
+$(document).ready(function() {
+
+	$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path=', function(){
+	
+		setupLinks();	
+		
+	});
+	
+	/*
+	$('#delete').click(function(){
+	
+		$('#delete').foreach(function(){
+		
+		   alert($(this).val);
+		
+		})
+
+	});
+	*/
+});
+
+</script>
+<div id="filelist"></div>
+
+
+								</div>
+							</div>
 						</div>
-						<table class="table table-striped table-bordered table-condensed">
-						
-						<?php
-						
-							$server = query_fetch_assoc( "SELECT * FROM `".DBPREFIX."server` WHERE `serverid` = '".$serverid."' LIMIT 1" );
-							$box = query_fetch_assoc( "SELECT `ip`, `login`, `password`, `sshport` FROM `".DBPREFIX."box` WHERE `boxid` = '".$server['boxid']."' LIMIT 1" );
-							###
-							$aes = new Crypt_AES();
-							$aes->setKeyLength(256);
-							$aes->setKey(CRYPT_KEY);
-							###
-							// Get SSH2 Object OR ERROR String
-							$ssh = newNetSSH2($box['ip'], $box['sshport'], $box['login'], $aes->decrypt($box['password']));
-							if (!is_object($ssh))
-							{
-								$_SESSION['msg1'] = T_('Connection Error!');
-								$_SESSION['msg2'] = $ssh;
-								$_SESSION['msg-type'] = 'error';
-								header( "Location: serverfiles.php?id=".urlencode($serverid) );
-								die();
-							}
-						
-							$viewhomedir = null;
-							if(isset($_GET['viewhomedir']))
-							{
-								$viewhomedirto = null;
-								$viewhomedir = $_GET['viewhomedir'];
-								
-								$dir = preg_split('/\//', $viewhomedir, -1, PREG_SPLIT_NO_EMPTY);
-								
-								
-								if(count($dir) > 1)
-									for($i = 0; $i < count($dir)-1; $i++)
-										$viewhomedirto .= "/".$dir[$i];
-								
-							if(count($dir) > 1)
-								echo "<a style='color:orange;' href='server.php?id={$serverid}&viewhomedir={$viewhomedirto}'>".T_('Back')."</a>&nbsp; | ";
-							echo "<a style='color:orange;' href='server.php?id={$serverid}'>".T_('Back To Home Dir')."</a><br/>";
-							}
-						
-							$files = preg_split ('/\n/', $ssh->exec("ls ".$server['homedir']."/".$viewhomedir), -1, PREG_SPLIT_NO_EMPTY);
-							
-							foreach($files as $name)
-							{
-									echo "<a href='server.php?id={$serverid}&viewhomedir={$viewhomedir}/{$name}'>".$name."</a>";
-									/*<div style='float:right;'>
-									<a style='color:red;' href='serverfiles.php?id={$serverid}&delete={$name}'>Delete</a>
-									&nbsp;<a style='color:white;' href='serverfiles.php?id={$serverid}&rename={$name}'>Rename</a>
-									&nbsp;<a style='color:gray;' href='serverfiles.php?id={$serverid}&deletefile={$name}'>Edit</a></div><br/>";*/
-							}	
-						?>
-						</table>
-					</div>
-				</div>
-
-				<div class="span6">
-					<div class="well">
-						<div style="text-align: center; margin-bottom: 5px;">
-							<span class="label label-info"><?php echo T_('Installer Files'); ?></span>
-						</div>
-						<table class="table table-striped table-bordered table-condensed">
-
-						<?php
-						
-							$server = query_fetch_assoc( "SELECT * FROM `".DBPREFIX."server` WHERE `serverid` = '".$serverid."' LIMIT 1" );
-							$box = query_fetch_assoc( "SELECT `ip`, `login`, `password`, `sshport` FROM `".DBPREFIX."box` WHERE `boxid` = '".$server['boxid']."' LIMIT 1" );
-							###
-							$aes = new Crypt_AES();
-							$aes->setKeyLength(256);
-							$aes->setKey(CRYPT_KEY);
-							###
-							// Get SSH2 Object OR ERROR String
-							$ssh = newNetSSH2($box['ip'], $box['sshport'], $box['login'], $aes->decrypt($box['password']));
-							if (!is_object($ssh))
-							{
-								$_SESSION['msg1'] = T_('Connection Error!');
-								$_SESSION['msg2'] = $ssh;
-								$_SESSION['msg-type'] = 'error';
-								header( "Location: serverfiles.php?id=".urlencode($serverid) );
-								die();
-							}
-						
-						
-							$viewcachedir = null;
-							if(isset($_GET['viewcachedir']))
-							{
-								$viewcachedirto = null;
-								$viewcachedir = $_GET['viewcachedir'];
-								
-								$dir = preg_split('/\//', $viewcachedir, -1, PREG_SPLIT_NO_EMPTY);
-								
-								
-								if(count($dir) > 1)
-									for($i = 0; $i < count($dir)-1; $i++)
-										$viewcachedirto .= "/".$dir[$i];
-								
-							if(count($dir) > 1)
-								echo "<a style='color:orange;' href='server.php?id={$serverid}&viewcachedir={$viewcachedirto}'>".T_('Back')."</a>&nbsp; | ";
-							echo "<a style='color:orange;' href='server.php?id={$serverid}'>".T_('Back To Home Dir')."</a><br/>";
-							}
-
-						
-							$files = preg_split ('/\n/', $ssh->exec("ls ".$game['cachedir']."/".$viewcachedir), -1, PREG_SPLIT_NO_EMPTY);
-							
-							foreach($files as $name)
-							{
-								echo "<a href='serverfiles.php?id={$serverid}&viewcachedir={$viewcachedir}/{$name}'>".$name."</a><br/><br/>";
-							}
-						
-						?>
-						
-						</table>
 					</div>
 				</div>
 			</div>
-
-			<div class="row-fluid">
-				<div class="span6">
-					<div class="well">
-						<div style="text-align: center; margin-bottom: 5px;">
-							<span class="label label-info"><?php echo T_('Files Control Panel'); ?></span>
-						</div>
-<?php
-
-if ($rows['status'] == 'Pending')
-{
-?>
-						<div class="alert alert-info">
-							<h4 class="alert-heading"><?php echo T_('Server not validated !'); ?></h4>
-							<p>
-								<?php echo T_('You must validate the server in order to use it.'); ?>
-							</p>
-						</div>
-<?php
-}
-else if ($rows['status'] == 'Inactive')
-{
-?>
-						<div class="alert alert-block" style="text-align: center;">
-							<h4 class="alert-heading"><?php echo T_('The server has been disabled !'); ?></h4>
-						</div>
-<?php
-}
-else if ($rows['panelstatus'] == 'Stopped') 
-{
-?>
-						<div style="text-align: center;">
-							<a class="btn btn-primary" href="server.php?task=serverinstallgamefiles&id=<?php echo $serverid; ?>"><?php echo T_('Install Game Files'); ?></a>
-							<a class="btn btn-warning" href="server.php?task=serverreinstallgamefiles&id=<?php echo $serverid; ?>"><?php echo T_('ReInstall Game Files'); ?></a>
-						</div>
-<?php
-}
-else if ($rows['panelstatus'] == 'Started') //The server has been validated and is marked as online, the available actions are to restart or to stop it
-{
-?>
-						<div style="text-align: center;">
-						<div class="alert alert-block" style="text-align: center;">
-							<h4 class="alert-heading"><?php echo T_('The server has been running !'); ?></h4>
-						</div>
-						</div>
-<?php
-}
-
-?>
-					</div>
-				</div>
-			</div>
-
-
-					</div>
-				</div>
 			<div style="text-align: center;">
 				<ul class="pager">
 					<li>
