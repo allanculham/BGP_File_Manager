@@ -62,22 +62,23 @@ if($action == 'list')
 
 if($action == 'fileUpload')
 {
-
-	echo 'upload function';
-
 	fileUpload($rowsBoxes, $extendedPath, $sftp);
-	
+
 }	
 
-if($action == 'delfolder')
+if($action == 'delete')
 {
-	
+    delete($rowsBoxes, $extendedPath, $sftp);	
 }	
 
-if($action == 'delfile')
+//ACTION FUNCTIONS
+
+function delete($rowsBoxes, $extendedPath, $sftp)
 {
-	
-}	
+	$remoteFile = dirname($rowsBoxes['path']).'/'.trim($extendedPath.'/');
+	return $sftp->delete($remoteFile, true);
+}
+
 
 function fileUpload($rowsBoxes, $extendedPath, $sftp)
 {
@@ -87,22 +88,28 @@ function fileUpload($rowsBoxes, $extendedPath, $sftp)
 	$remoteFile = dirname($rowsBoxes['path']).'/'.trim($extendedPath.'/'.$sourceName, '/');
 	
 	echo $sftp->put($remoteFile, file_get_contents($sourceFile));
-	
-	
-
 }
 
 
 function getList($rowsBoxes, $extendedPath, $sftp)
 {	
-	$list = $sftp->rawlist(dirname($rowsBoxes['path']).$extendedPath);			
-	foreach($list as $key => $row)
-	{
-		$names[] = $key;
-		$types[] = $row['type'];	
-	}
 
-	array_multisort($types, SORT_DESC, $names, SORT_ASC, $list);
+	$path =  dirname($rowsBoxes['path']).$extendedPath.'/';
+	
+	echo $path;
+
+	$list = $sftp->rawlist($path);	
+	
+	if(count($list) > 0)
+	{
+		foreach($list as $key => $row)
+		{
+			$names[] = $key;
+			$types[] = $row['type'];	
+		}
+
+		array_multisort($types, SORT_DESC, $names, SORT_ASC, $list);
+	}
 	
 	echo '<div class="well">';
 	echo '<div class="pull-left">'.$extendedPath.'</div>';
@@ -136,54 +143,48 @@ function RenderFileList($list, $extendedPath)
 	echo '<th>Name</th>';
 	echo '<th style="text-align:right">Size</th>';
 	echo '<th style="text-align:right">Modified</th>';
-	//echo '<th width="100px"></th>';
-	//echo '<th width="100px"></th>';
-	
 	echo '</tr>';
 	echo '</thead>';
 	echo '<tbody>';
 	
 	foreach($list as $key => $row)
 	{
-		echo '<tr>';	
-		echo '<td><div class="checkbox"><input class="fileSelector" type="checkbox" value="'.$extendedPath.'/'.$key.'"></div></td>';
-		echo '<td>';
+		if($key != '.')
+		{
+			echo '<tr>';	
+			echo '<td><div class="checkbox"><input class="fileSelector" type="checkbox" value="'.$extendedPath.'/'.$key.'"></div></td>';
+			echo '<td>';
+					
+			switch ($row['type'])
+			{	
+				case 2:
+					echo '<span class="icon-folder-close"></span>';
+					break;
+				case 1;
+					echo '<span class="icon-file"></span>';
+					break;
+			}	
+			echo '</td>';
+			
+			if($key == '..')
+			{
 				
-		switch ($row['type'])
-		{	
-			case 2:
-				echo '<span class="icon-folder-close"></span>';
-				break;
-			case 1;
-				echo '<span class="icon-file"></span>';
-				break;
-		}	
-		echo '</td>';
-		
-		if($key == '..')
-		{
+				echo '<td><b><div title="Return to parent folder" style="cursor: pointer;" class="folder" value="'.dirname($extendedPath).'">'.$key.'</div></b></td>';
+				
 			
-			echo '<td><b><div title="Return to parent folder" style="cursor: pointer;" class="folder" value="'.dirname($extendedPath).'">'.$key.'</div></b></td>';
+			}
+			elseif($row['type'] == 2)
+			{
+				echo '<td><div style="cursor: pointer;" class="folder" value="'.$extendedPath.'/'.$key.'">'.$key.'</div></td>';
+			}
+			else	
+			{
+			echo '<td>'.$key.'</td>';
+			}
 			
-		
+			echo '<td style="text-align:right;">'.formatBytes($row['size']).'</td>';
+			echo '<td style="text-align:right;">'.gmdate("Y-m-d H:i:s", $row['mtime']).'</td>';
 		}
-		elseif($row['type'] == 2)
-		{
-			echo '<td><div style="cursor: pointer;" class="folder" value="'.$extendedPath.'/'.$key.'">'.$key.'</div></td>';
-		}
-		else	
-		{
-		echo '<td>'.$key.'</td>';
-		}
-		
-		echo '<td style="text-align:right;">'.formatBytes($row['size']).'</td>';
-		echo '<td style="text-align:right;">'.gmdate("Y-m-d H:i:s", $row['mtime']).'</td>';
-	
-	    //echo '<td><button type="button" class="btn btn-success btn-sm">Download</button></td>';
-		//echo '<td><button type="button" class="btn btn-danger btn-sm">Delete</button></td>';
-		//echo '<td><a class="btn btn-danger btn-small" href="" onclick="return confirm("Are you sure you want to delete this ticket?")">
-		//            <i class="icon-trash icon-white"></i></a></td>';
-		//echo '</tr>';
 	}
 	echo '</tbody>';
 	echo '</table>';

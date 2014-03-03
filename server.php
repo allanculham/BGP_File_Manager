@@ -597,23 +597,44 @@ unset($logs);
 							<div class="span12">
 								<div class="well">
 								
-								<script type="text/javascript">
+<script type="text/javascript">
 
 	function setupLinks(){
-	
-		$('.folder').click(function(){			
-			path = $(this).attr('value');		
+		
+		$('.folder').click(function(){		
+			
+			path = $(this).attr('value');	
+			
 			$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path='+ encodeURIComponent(path), function(){				
 				setupLinks();			
 			});		
 		});
 		
 		$('#delete').click(function(){	
+		
 			$('.fileSelector').each(function(){
 			if (this.checked) {		
-			   alert($(this).attr('value'));
+			
+			var path = $(this).val();
+			$.ajax({
+				url: "filemanagerajax.php?action=delete&serverid=<?php echo $serverid;?>&path="+ encodeURIComponent(path),
+				type: "GET",
+				}).done(function( data ) {
+				
+					//SET NOTIFICATION HERE
+					
+					$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path='+ encodeURIComponent(path), function(){				
+						setupLinks();			
+					});	
+
+				});
 			}			
 			})
+			
+			$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path='+ encodeURIComponent(path), function(){				
+				setupLinks();			
+			});					
+	
 		});
 		
 		$('#upload').click(function(){
@@ -637,35 +658,25 @@ unset($logs);
 			
 				$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path='+ encodeURIComponent(path), function(){				
 					setupLinks();			
-				});	
-			
+				});			
+				
 			});
 
 		});
 
-
+	
 	}
 	
 
 $(document).ready(function() {
 
-	$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path=', function(){
-	
-		setupLinks();	
-		
-	});
-	
-	/*
-	$('#delete').click(function(){
-	
-		$('#delete').foreach(function(){
-		
-		   alert($(this).val);
-		
-		})
+		$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path=', function(){
 
-	});
-	*/
+			setupLinks();
+		
+		});
+		
+
 });
 
 </script>

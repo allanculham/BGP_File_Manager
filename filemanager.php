@@ -37,11 +37,6 @@ $serverid = $_GET['serverid'];
 
 require("configuration.php");
 require("include.php");
-//include_once("./libs/lgsl/lgsl_class.php");
-//define('CRYPT_KEY', file_get_contents(".ssh/passphrase"));
-//require('../includes/functions.php');
-//require('../includes/mysql.php');
-
 
 
 $title = T_('File Manager');
@@ -51,28 +46,46 @@ $rows = query_fetch_assoc( "SELECT * FROM `".DBPREFIX."client` WHERE `clientid` 
 include("./bootstrap/header.php");
 
 
-
-
-
 ?>
 
 <script type="text/javascript">
 
 	function setupLinks(){
-	
-		$('.folder').click(function(){			
-			path = $(this).attr('value');		
+		
+		$('.folder').click(function(){		
+			
+			path = $(this).attr('value');	
+			
 			$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path='+ encodeURIComponent(path), function(){				
 				setupLinks();			
 			});		
 		});
 		
 		$('#delete').click(function(){	
+		
 			$('.fileSelector').each(function(){
 			if (this.checked) {		
-			   alert($(this).attr('value'));
+			
+			var path = $(this).val();
+			$.ajax({
+				url: "filemanagerajax.php?action=delete&serverid=<?php echo $serverid;?>&path="+ encodeURIComponent(path),
+				type: "GET",
+				}).done(function( data ) {
+				
+					//SET NOTIFICATION HERE
+					
+					$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path='+ encodeURIComponent(path), function(){				
+						setupLinks();			
+					});	
+
+				});
 			}			
 			})
+			
+			$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path='+ encodeURIComponent(path), function(){				
+				setupLinks();			
+			});					
+	
 		});
 		
 		$('#upload').click(function(){
@@ -96,35 +109,25 @@ include("./bootstrap/header.php");
 			
 				$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path='+ encodeURIComponent(path), function(){				
 					setupLinks();			
-				});	
-			
+				});			
+				
 			});
 
 		});
 
-
+	
 	}
 	
 
 $(document).ready(function() {
 
-	$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path=', function(){
-	
-		setupLinks();	
-		
-	});
-	
-	/*
-	$('#delete').click(function(){
-	
-		$('#delete').foreach(function(){
-		
-		   alert($(this).val);
-		
-		})
+		$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path=', function(){
 
-	});
-	*/
+			setupLinks();
+		
+		});
+		
+
 });
 
 </script>
