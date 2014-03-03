@@ -599,14 +599,17 @@ unset($logs);
 								
 <script type="text/javascript">
 
-	function setupLinks(){
+	function setupLinks(path){
+	
+		if (typeof path === 'undefined') { path = ''; }
+	
 		
 		$('.folder').click(function(){		
 			
 			path = $(this).attr('value');	
 			
 			$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path='+ encodeURIComponent(path), function(){				
-				setupLinks();			
+				setupLinks(path);			
 			});		
 		});
 		
@@ -615,16 +618,16 @@ unset($logs);
 			$('.fileSelector').each(function(){
 			if (this.checked) {		
 			
-			var path = $(this).val();
+			var delPath = $(this).val();
 			$.ajax({
-				url: "filemanagerajax.php?action=delete&serverid=<?php echo $serverid;?>&path="+ encodeURIComponent(path),
+				url: "filemanagerajax.php?action=delete&serverid=<?php echo $serverid;?>&path="+ encodeURIComponent(delPath),
 				type: "GET",
 				}).done(function( data ) {
 				
 					//SET NOTIFICATION HERE
 					
 					$('#filelist').load('filemanagerajax.php?action=list&serverid=<?php echo $serverid;?>&path='+ encodeURIComponent(path), function(){				
-						setupLinks();			
+						setupLinks(path);			
 					});	
 
 				});

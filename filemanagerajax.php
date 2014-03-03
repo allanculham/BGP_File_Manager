@@ -96,7 +96,7 @@ function getList($rowsBoxes, $extendedPath, $sftp)
 
 	$path =  dirname($rowsBoxes['path']).$extendedPath.'/';
 	
-	echo $path;
+	//echo $path;
 
 	$list = $sftp->rawlist($path);	
 	
